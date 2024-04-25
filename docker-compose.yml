@@ -15,7 +15,7 @@ services:
     command: -c 'mkdir -p /data/warehouse && minio server --console-address ":9001" /data'
 
   postgres:
-    image: postgres:16.2
+    image: postgres:15.1
     networks:
       - local
     environment:

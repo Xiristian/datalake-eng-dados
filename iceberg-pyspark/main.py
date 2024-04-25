@@ -22,7 +22,7 @@ def init_spark():
 
             # Configure SQL connection to track tables inside `my_iceberg_catalog`
             ("spark.sql.catalog.my_iceberg_catalog.catalog-impl", "org.apache.iceberg.jdbc.JdbcCatalog"),
-            ("spark.sql.catalog.my_iceberg_catalog.uri", "jdbc:postgresql://localhost:5432/iceberg_db"),
+            ("spark.sql.catalog.my_iceberg_catalog.uri", "jdbc:postgresql://postgres:5432/iceberg_db"),
             ("spark.sql.catalog.my_iceberg_catalog.jdbc.user", "postgres"),
             ("spark.sql.catalog.my_iceberg_catalog.jdbc.password", "postgres"),
 
