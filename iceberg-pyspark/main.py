@@ -156,11 +156,37 @@ def write_data(spark: SparkSession):
       .append()
       
 def update_data(spark: SparkSession):
-    olist_geolocation_dataset: DataFrame = spark.table("my_iceberg_catalog.db.olist_geolocation_dataset")
-    olist_geolocation_dataset \
-      .filter(F.col("geolocation_zip_code_prefix") == "1001") \
-      .update("geolocation_city", F.lit("New York"))
+  spark.table("my_iceberg_catalog.db.olist_geolocation_dataset").filter(F.col("geolocation_zip_code_prefix") == "1001").show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_geolocation_dataset SET geolocation_city = 'New York' WHERE geolocation_zip_code_prefix = '1001'")
+  spark.table("my_iceberg_catalog.db.olist_geolocation_dataset").filter(F.col("geolocation_zip_code_prefix") == "1001").show(3)
 
+  spark.table("my_iceberg_catalog.db.olist_customers_dataset").filter(F.col("customer_zip_code_prefix") == "14409").show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_customers_dataset SET customer_city = 'SOMBRIO', customer_state = 'SC' WHERE customer_zip_code_prefix = '14409'")
+  spark.table("my_iceberg_catalog.db.olist_customers_dataset").filter(F.col("customer_zip_code_prefix") == "14409").show(3)
+
+  spark.table("my_iceberg_catalog.db.olist_order_items_dataset").filter((F.col("shipping_limit_date") >= '2017-04-01 00:00:00') & (F.col("shipping_limit_date") <= '2017-06-30 23:59:59')).orderBy('order_id').show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_order_items_dataset SET price = price / 2 WHERE (shipping_limit_date >= '2017-04-01 00:00:00') AND (shipping_limit_date <= '2017-06-30 23:59:59')")
+  spark.table("my_iceberg_catalog.db.olist_order_items_dataset").filter((F.col("shipping_limit_date") >= '2017-04-01 00:00:00') & (F.col("shipping_limit_date") <= '2017-06-30 23:59:59')).orderBy('order_id').show(3)
+
+  spark.table("my_iceberg_catalog.db.olist_order_payments_dataset").filter(F.col("payment_type") == "debit_card").orderBy('payment_sequential').show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_order_payments_dataset SET payment_value = payment_value * 1.1 WHERE payment_type = 'debit_card'")
+  spark.table("my_iceberg_catalog.db.olist_order_payments_dataset").filter(F.col("payment_type") == "debit_card").orderBy('payment_sequential').show(3)
+
+  spark.table("my_iceberg_catalog.db.olist_order_reviews_dataset").filter((F.col("review_creation_date") >= '2018-01-05') & (F.col("review_creation_date") <= '2018-04-30')).orderBy('order_id').show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_order_reviews_dataset SET review_score = 5 WHERE (review_score = 1) AND (review_creation_date >= '2018-01-05') AND (review_creation_date <= '2018-04-30')")
+  spark.table("my_iceberg_catalog.db.olist_order_reviews_dataset").filter((F.col("review_creation_date") >= '2018-01-05') & (F.col("review_creation_date") <= '2018-04-30')).orderBy('order_id').show(3)
+
+  spark.table("my_iceberg_catalog.db.olist_orders_dataset").filter(F.col("order_status") == "delivered").orderBy('order_id').show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_orders_dataset SET order_status = 'processing' WHERE order_status = 'delivered'")
+  spark.table("my_iceberg_catalog.db.olist_orders_dataset").filter(F.col("order_status") == "processing").orderBy('order_id').show(3)
+
+  spark.table("my_iceberg_catalog.db.olist_products_dataset").filter(F.col("product_category_name") == "informatica_acessorios").show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_products_dataset SET product_category_name = 'informatica' WHERE product_category_name = 'informatica_acessorios'")
+  spark.table("my_iceberg_catalog.db.olist_products_dataset").filter(F.col("product_category_name") == "informatica").show(3)
+
+  spark.table("my_iceberg_catalog.db.olist_sellers_dataset").filter(F.col("seller_zip_code_prefix") == "88804").show(3)
+  spark.sql("UPDATE my_iceberg_catalog.db.olist_sellers_dataset SET seller_city = 'Sombrio' WHERE seller_zip_code_prefix = '88804'")
+  spark.table("my_iceberg_catalog.db.olist_sellers_dataset").filter(F.col("seller_zip_code_prefix") == "88804").show(3)
 
 def read_data(spark: SparkSession):
     olist_geolocation_dataset = spark.table("my_iceberg_catalog.db.olist_geolocation_dataset")
@@ -171,13 +197,14 @@ def app():
     spark = init_spark()
 
     create_table(spark)
-
+    
+    update_data(spark)
     #write_data(spark)
 
     # add_column(spark)
 
     # update_data(spark)
-    read_data(spark)
+    #read_data(spark)
 
     # drop_table(spark)
 
