@@ -188,6 +188,41 @@ def update_data(spark: SparkSession):
   spark.sql("UPDATE my_iceberg_catalog.db.olist_sellers_dataset SET seller_city = 'Sombrio' WHERE seller_zip_code_prefix = '88804'")
   spark.table("my_iceberg_catalog.db.olist_sellers_dataset").filter(F.col("seller_zip_code_prefix") == "88804").show(3)
 
+
+def delete_data(spark: SparkSession):
+    spark.table("my_iceberg_catalog.db.olist_geolocation_dataset").filter(F.col("geolocation_city") == "nova veneza").show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_geolocation_dataset WHERE geolocation_city = 'nova veneza';")
+    spark.table("my_iceberg_catalog.db.olist_geolocation_dataset").filter(F.col("geolocation_city") == "nova veneza").show(3)
+
+    spark.table("my_iceberg_catalog.db.olist_order_items_dataset").filter(F.col("price") < 5000).show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_order_items_dataset WHERE price < 5000 ;")
+    spark.table("my_iceberg_catalog.db.olist_order_items_dataset").filter(F.col("price") < 5000).show(3)
+
+    spark.table("my_iceberg_catalog.db.olist_order_payments_dataset").filter((F.col("payment_type") == "voucher") | (F.col("payment_type") == "boleto")).show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_order_payments_dataset WHERE payment_type = 'voucher' OR payment_type = 'boleto' ;")
+    spark.table("my_iceberg_catalog.db.olist_order_payments_dataset").filter((F.col("payment_type") == "voucher") | (F.col("payment_type") == "boleto")).show(3)
+
+    spark.table("my_iceberg_catalog.db.olist_order_reviews_dataset").filter(F.col("review_score") < 3).show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_order_reviews_dataset WHERE review_score < 3 ;")
+    spark.table("my_iceberg_catalog.db.olist_order_reviews_dataset").filter(F.col("review_score") < 3).show(3)
+
+    spark.table("my_iceberg_catalog.db.olist_orders_dataset").filter((F.col("order_status") == "delivered") & (F.col("order_purchase_timestamp") < "2018-01-01 00:00:00")).show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_orders_dataset WHERE order_status = 'delivered' AND order_purchase_timestamp < '2018-01-01 00:00:00' ;")
+    spark.table("my_iceberg_catalog.db.olist_orders_dataset").filter((F.col("order_status") == "delivered") & (F.col("order_purchase_timestamp") < "2018-01-01 00:00:00")).show(3)
+
+    spark.table("my_iceberg_catalog.db.olist_products_dataset").filter(F.col("product_category_name").isNull()).show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_products_dataset WHERE product_category_name IS NULL ;")
+    spark.table("my_iceberg_catalog.db.olist_products_dataset").filter(F.col("product_category_name").isNull()).show(3)
+
+    spark.table("my_iceberg_catalog.db.olist_sellers_dataset").filter(F.col("seller_zip_code_prefix") > 50000).show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_sellers_dataset WHERE seller_zip_code_prefix > 50000 ;")
+    spark.table("my_iceberg_catalog.db.olist_sellers_dataset").filter(F.col("seller_zip_code_prefix") > 50000).show(3)
+
+    spark.table("my_iceberg_catalog.db.olist_customers_dataset").filter((F.col("customer_state") == "SP") & (F.col("customer_city") == "pindamonhangaba")).show(3)
+    spark.sql("DELETE FROM my_iceberg_catalog.db.olist_customers_dataset WHERE customer_state = 'SP' AND customer_city = 'pindamonhangaba' ;")
+    spark.table("my_iceberg_catalog.db.olist_customers_dataset").filter((F.col("customer_state") == "SP") & (F.col("customer_city") == "pindamonhangaba")).show(3)
+    
+    
 def read_data(spark: SparkSession):
     olist_geolocation_dataset = spark.table("my_iceberg_catalog.db.olist_geolocation_dataset")
     olist_geolocation_dataset.orderBy("geolocation_zip_code_prefix").show(3)
