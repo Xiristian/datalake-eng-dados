@@ -1,8 +1,9 @@
 import os
-
 from pyspark import SparkConf
 from pyspark.sql import SparkSession, DataFrame
-import pyspark.sql.functions as F
+from pyspark.sql import functions as F
+from pyspark.sql.types import TimestampType
+from pyspark.sql import Row
 
 
 def init_spark():
@@ -136,7 +137,6 @@ def create_table(spark: SparkSession):
     """)
 
 
-
 def drop_table(spark: SparkSession):
     spark.sql("TRUNCATE TABLE my_iceberg_catalog.db.olist_geolocation_dataset;")
     spark.sql("DROP TABLE my_iceberg_catalog.db.olist_geolocation_dataset;")
@@ -144,17 +144,139 @@ def drop_table(spark: SparkSession):
 
 def write_data(spark: SparkSession):
     current_dir = os.path.realpath(os.path.dirname(__file__))
-    path = os.path.join(current_dir, "ecommerce-data", "olist_geolocation_dataset.csv")
 
-    olist_geolocation_dataset: DataFrame = spark.read \
-      .option("header", "true") \
-      .option("inferSchema", "true") \
-      .csv(path)
+    tables = {
+        "olist_customers_dataset": "olist_customers_dataset.csv",
+        "olist_geolocation_dataset": "olist_geolocation_dataset.csv",
+        "olist_order_items_dataset": "olist_order_items_dataset.csv",
+        "olist_order_payments_dataset": "olist_order_payments_dataset.csv",
+        "olist_order_reviews_dataset": "olist_order_reviews_dataset.csv",
+        "olist_orders_dataset": "olist_orders_dataset.csv",
+        "olist_products_dataset": "olist_products_dataset.csv",
+        "olist_sellers_dataset": "olist_sellers_dataset.csv",
+        "product_categories_name_translation": "product_category_name_translation.csv"
+    }
 
-    olist_geolocation_dataset \
-      .writeTo("my_iceberg_catalog.db.olist_geolocation_dataset") \
-      .append()
-      
+    for table, file_name in tables.items():
+        path = os.path.join(current_dir, "ecommerce-data", file_name)
+
+        # Converter tipos de dados durante a leitura do CSV
+        if table == "olist_order_reviews_dataset":
+            df: DataFrame = spark.read \
+                .option("header", "true") \
+                .option("inferSchema", "true") \
+                .csv(path) \
+                .withColumn("review_score", F.col("review_score").cast("int")) \
+                .withColumn("review_creation_date", F.col("review_creation_date").cast("timestamp")) \
+                .withColumn("review_answer_timestamp", F.col("review_answer_timestamp").cast("timestamp"))
+        elif table == "olist_order_items_dataset":
+            df: DataFrame = spark.read \
+                .option("header", "true") \
+                .option("inferSchema", "true") \
+                .csv(path) \
+                .withColumn("shipping_limit_date", F.col("shipping_limit_date").cast("timestamp"))
+        elif table == "olist_orders_dataset":
+            df: DataFrame = spark.read \
+                .option("header", "true") \
+                .option("inferSchema", "true") \
+                .csv(path) \
+                .withColumn("order_purchase_timestamp", F.col("order_purchase_timestamp").cast("timestamp")) \
+                .withColumn("order_approved_at", F.col("order_approved_at").cast("timestamp")) \
+                .withColumn("order_delivered_carrier_date", F.col("order_delivered_carrier_date").cast("timestamp")) \
+                .withColumn("order_delivered_customer_date", F.col("order_delivered_customer_date").cast("timestamp")) \
+                .withColumn("order_estimated_delivery_date", F.col("order_estimated_delivery_date").cast("timestamp"))
+        elif table == "olist_products_dataset":
+
+            df: DataFrame = spark.read \
+                .option("header", "true") \
+                .option("inferSchema", "true") \
+                .csv(path) \
+                .withColumnRenamed("product_name_lenght", "product_name_length") \
+                .withColumnRenamed("product_description_lenght", "product_description_length") \
+                .withColumn("product_name_length", F.col("product_name_length").cast("int")) \
+                .withColumn("product_description_length", F.col("product_description_length").cast("int"))
+        else:
+            df: DataFrame = spark.read.option("header", "true").option("inferSchema", "true").csv(path)
+
+        df.writeTo(f"my_iceberg_catalog.db.{table}").append()
+
+
+def insert_records(spark: SparkSession):
+    # Inserir registros nas tabelas usando spark.sql
+    spark.sql("""
+        INSERT INTO my_iceberg_catalog.db.olist_order_items_dataset
+        VALUES ('1', 1, 'produto1', 'vendedor1', TIMESTAMP '2024-04-25 12:00:00', 100.0, 10.0);
+    """)
+
+    spark.sql("""
+        INSERT INTO my_iceberg_catalog.db.olist_order_payments_dataset
+        VALUES ('1', 1, 'debito', 1, 100.0);
+    """)
+
+    spark.sql("""
+        INSERT INTO my_iceberg_catalog.db.olist_order_reviews_dataset
+        VALUES ('1', 'pedido1', 5, 'ótimo produto', 'produto chegou antes do prazo', TIMESTAMP '2024-04-25 12:00:00', TIMESTAMP '2024-04-26 12:00:00');
+    """)
+
+    spark.sql("""
+        INSERT INTO my_iceberg_catalog.db.olist_orders_dataset
+        VALUES ('1', 'cliente1', 'aprovado', TIMESTAMP '2024-04-25 12:00:00', TIMESTAMP '2024-04-25 12:00:00', TIMESTAMP '2024-04-26 12:00:00', TIMESTAMP '2024-04-27 12:00:00', TIMESTAMP '2024-04-28 12:00:00');
+    """)
+
+    spark.sql("""
+        INSERT INTO my_iceberg_catalog.db.olist_products_dataset
+        VALUES ('produto1', 'categoria1', 10, 50, 5, 500, 20, 30, 40);
+    """)
+
+    spark.sql("""
+        INSERT INTO my_iceberg_catalog.db.olist_sellers_dataset
+        VALUES ('vendedor1', '12345', 'Cidade1', 'Estado1');
+    """)
+
+    spark.sql("""
+        INSERT INTO my_iceberg_catalog.db.product_categories_name_translation
+        VALUES ('categoria1', 'category1');
+    """)
+
+    # Inserir registros nas tabelas usando spark.createDataFrame
+    order_payments_data = [
+        Row(order_id='2', payment_sequential=2, payment_type='credito', payment_installments=2, payment_value=200.0),
+        Row(order_id='3', payment_sequential=3, payment_type='boleto', payment_installments=3, payment_value=300.0)
+    ]
+    order_payments_df = spark.createDataFrame(order_payments_data, schema=['order_id', 'payment_sequential', 'payment_type', 'payment_installments', 'payment_value'])
+    order_payments_df.writeTo("my_iceberg_catalog.db.olist_order_payments_dataset").append()
+
+    order_reviews_data = [
+        Row(review_id='2', order_id='pedido2', review_score=4, review_comment_title='bom produto', review_comment_message='recomendo', review_creation_date='2024-04-25 12:00:00', review_answer_timestamp='2024-04-26 12:00:00'),
+        Row(review_id='3', order_id='pedido3', review_score=3, review_comment_title='produto regular', review_comment_message='poderia melhorar', review_creation_date='2024-04-25 12:00:00', review_answer_timestamp='2024-04-26 12:00:00')
+    ]
+    order_reviews_df = spark.createDataFrame(order_reviews_data, schema=['review_id', 'order_id', 'review_score', 'review_comment_title', 'review_comment_message', 'review_creation_date', 'review_answer_timestamp'])
+    order_reviews_df = order_reviews_df \
+        .withColumn("review_creation_date", F.col("review_creation_date").cast(TimestampType())) \
+        .withColumn("review_answer_timestamp", F.col("review_answer_timestamp").cast(TimestampType()))
+    order_reviews_df.writeTo("my_iceberg_catalog.db.olist_order_reviews_dataset").append()
+
+    orders_data = [
+        Row(order_id='2', customer_id='cliente2', order_status='aprovado', order_purchase_timestamp='2024-04-25 12:00:00', order_approved_at='2024-04-25 12:00:00', order_delivered_carrier_date='2024-04-26 12:00:00', order_delivered_customer_date='2024-04-27 12:00:00', order_estimated_delivery_date='2024-04-28 12:00:00'),
+        Row(order_id='3', customer_id='cliente3', order_status='cancelado', order_purchase_timestamp='2024-04-25 12:00:00', order_approved_at='2024-04-25 12:00:00', order_delivered_carrier_date='2024-04-26 12:00:00', order_delivered_customer_date='2024-04-27 12:00:00', order_estimated_delivery_date='2024-04-28 12:00:00')
+    ]
+    orders_df = spark.createDataFrame(orders_data, schema=['order_id', 'customer_id', 'order_status', 'order_purchase_timestamp', 'order_approved_at', 'order_delivered_carrier_date', 'order_delivered_customer_date', 'order_estimated_delivery_date'])
+    orders_df = orders_df \
+        .withColumn("order_purchase_timestamp", F.col("order_purchase_timestamp").cast(TimestampType())) \
+        .withColumn("order_approved_at", F.col("order_approved_at").cast(TimestampType())) \
+        .withColumn("order_delivered_carrier_date", F.col("order_delivered_carrier_date").cast(TimestampType())) \
+        .withColumn("order_delivered_customer_date", F.col("order_delivered_customer_date").cast(TimestampType())) \
+        .withColumn("order_estimated_delivery_date", F.col("order_estimated_delivery_date").cast(TimestampType()))
+    orders_df.writeTo("my_iceberg_catalog.db.olist_orders_dataset").append()
+
+    products_data = [
+        Row(product_id='produto2', product_category_name='categoria2', product_name_length=8, product_description_length=100, product_photos_qty=3, product_weight_g=600, product_length_cm=25, product_height_cm=35, product_width_cm=45),
+        Row(product_id='produto3', product_category_name='categoria3', product_name_length=12, product_description_length=150, product_photos_qty=5, product_weight_g=800, product_length_cm=30, product_height_cm=40, product_width_cm=50)
+    ]
+    products_df = spark.createDataFrame(products_data, schema=['product_id', 'product_category_name', 'product_name_length', 'product_description_length', 'product_photos_qty', 'product_weight_g', 'product_length_cm', 'product_height_cm', 'product_width_cm'])
+    products_df.writeTo("my_iceberg_catalog.db.olist_products_dataset").append()
+
+
 def update_data(spark: SparkSession):
     olist_geolocation_dataset: DataFrame = spark.table("my_iceberg_catalog.db.olist_geolocation_dataset")
     olist_geolocation_dataset \
@@ -172,14 +294,14 @@ def app():
 
     create_table(spark)
 
-    #write_data(spark)
+    write_data(spark)
 
-    # add_column(spark)
+    insert_records(spark)
 
-    # update_data(spark)
+    #update_data(spark)
     read_data(spark)
 
-    # drop_table(spark)
+    #drop_table(spark)
 
 
 if __name__ == "__main__":
