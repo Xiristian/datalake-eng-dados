@@ -33,6 +33,7 @@ def init_spark():
             ("spark.sql.catalog.my_iceberg_catalog.warehouse", "s3://warehouse"),
         ])
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
+    spark.sparkContext.setLogLevel('WARN')
 
     return spark
 
@@ -137,9 +138,20 @@ def create_table(spark: SparkSession):
 
 
 
-def drop_table(spark: SparkSession):
-    spark.sql("TRUNCATE TABLE my_iceberg_catalog.db.olist_geolocation_dataset;")
-    spark.sql("DROP TABLE my_iceberg_catalog.db.olist_geolocation_dataset;")
+def clean_table(spark: SparkSession):
+  tables = {
+    "olist_customers_dataset": "olist_customers_dataset.csv",
+    "olist_geolocation_dataset": "olist_geolocation_dataset.csv",
+    "olist_order_items_dataset": "olist_order_items_dataset.csv",
+    "olist_order_payments_dataset": "olist_order_payments_dataset.csv",
+    "olist_order_reviews_dataset": "olist_order_reviews_dataset.csv",
+    "olist_orders_dataset": "olist_orders_dataset.csv",
+    "olist_products_dataset": "olist_products_dataset.csv",
+    "olist_sellers_dataset": "olist_sellers_dataset.csv",
+    "product_categories_name_translation": "product_category_name_translation.csv"
+  }
+  for table, file_name in tables.items():
+    spark.sql(f"TRUNCATE TABLE my_iceberg_catalog.db.{table};")
 
 
 def write_data(spark: SparkSession):
@@ -232,17 +244,10 @@ def app():
     spark = init_spark()
 
     create_table(spark)
-    
+    clean_table(spark)
+    write_data(spark)
+    delete_data(spark)
     update_data(spark)
-    #write_data(spark)
-
-    # add_column(spark)
-
-    # update_data(spark)
-    #read_data(spark)
-
-    # drop_table(spark)
-
 
 if __name__ == "__main__":
     app()
