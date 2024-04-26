@@ -1,0 +1,93 @@
+Table olist_geolocation_dataset {
+  geolocation_zip_code_prefix varchar(5) [primary key]
+  geolocation_lat decimal(10,8)
+  geolocation_lng decimal(11,8)
+  geolocation_city varchar
+  geolocation_state varchar
+}
+
+
+Table olist_order_items_dataset {
+  order_id varchar(32) [primary key]
+  order_item_id integer [primary key]
+  product_id varchar(32)
+  seller_id varchar(32)
+  shipping_limit_date timestamp
+  price decimal(10,2)
+  freight_value decimal(10,2)
+}
+
+
+Table olist_order_payments_dataset {
+  order_id varchar(32) [primary key]
+  payment_sequential integer [primary key]
+  payment_type varchar
+  payment_installments integer
+  payment_value decimal(10,2)
+}
+
+
+Table olist_order_reviews_dataset {
+  review_id varchar(32) [primary key]
+  order_id varchar(32) [primary key]
+  review_score integer
+  review_comment_title varchar
+  review_comment_message varchar
+  review_creation_date timestamp
+  review_answer_timestamp timestamp
+}
+
+
+Table olist_orders_dataset{
+  order_id varchar(32) [primary key]
+  customer_id varchar(32)
+  order_status varchar
+  order_purchase_timestamp timestamp
+  order_approved_at timestamp
+  order_delivered_carrier_date timestamp
+  order_delivered_customer_date timestamp
+  order_estimated_delivery_date timestamp
+}
+
+Table olist_products_dataset {
+  product_id varchar(32) [primary key]
+  product_category_name varchar
+  product_name_length integer
+  product_description_length integer
+  product_photos_qty integer
+  product_weight_g integer
+  product_length_cm integer
+  product_height_cm integer
+  product_width_cm integer
+}
+
+Table olist_sellers_dataset {
+  seller_id varchar(32) [primary key]
+  seller_zip_code_prefix varchar(5)
+  seller_city varchar
+  seller_state varchar
+}
+
+Table product_categories_name_translation {
+  product_category_name varchar [primary key]
+  product_category_name_english varchar
+}
+
+Table olist_customers_dataset {
+  customer_id varchar(32) [primary key]
+  customer_unique_id varchar
+  customer_zip_code_prefix varchar(5)
+  customer_city varchar
+  customer_state varchar
+}
+
+
+Ref: olist_order_items_dataset.product_id - olist_products_dataset.product_id
+Ref: olist_order_items_dataset.seller_id - olist_sellers_dataset.seller_id
+Ref: olist_order_payments_dataset.order_id - olist_orders_dataset.order_id
+Ref: olist_order_reviews_dataset.order_id - olist_orders_dataset.order_id
+Ref: olist_orders_dataset.order_id - olist_order_items_dataset.order_id
+Ref: olist_orders_dataset.customer_id - olist_customers_dataset.customer_id
+Ref: olist_products_dataset.product_category_name - product_categories_name_translation.product_category_name
+Ref: olist_customers_dataset.customer_zip_code_prefix - olist_geolocation_dataset.geolocation_zip_code_prefix
+Ref: olist_sellers_dataset.seller_zip_code_prefix - olist_geolocation_dataset.geolocation_zip_code_prefix
